@@ -106,9 +106,33 @@ This project is based on the original Jenkins Collector Docker image available a
 
 We would like to acknowledge the original author(s) for their work on this project. Please refer to the Docker Hub link above for more details on the original source.
 
-## Grafana Dashboard
+## Importing the Grafana Dashboard
 
-For visualizing Jenkins build status, you can use the Jenkins Job Status Dashboard available on Grafana. This dashboard provides insights into your Jenkins jobs and builds, helping you monitor your CI/CD pipeline effectively.
+To visualize Jenkins build status using Grafana, you can use the Jenkins Job Status Dashboard available on Grafana. This dashboard provides insights into your Jenkins jobs and builds, helping you monitor your CI/CD pipeline effectively.
 
-Dashboard ID: **21803**  
-Available at: [Grafana - Jenkins Job Status Dashboard](https://grafana.com/grafana/dashboards/21803-jenkins-job-status-dashboard/)
+![Dashboard Image](Dashboard-21803_rev1.png)
+
+### Option 1: Import via Grafana Dashboard ID
+
+You can import the dashboard directly using its ID:
+
+- Dashboard ID: **21803**
+- Available at: [Grafana - Jenkins Job Status Dashboard](https://grafana.com/grafana/dashboards/21803-jenkins-job-status-dashboard/)
+
+1. Navigate to your Grafana instance.
+2. Click the "+" icon on the left sidebar and select **Import**.
+3. Enter the dashboard ID `21803` and click **Load**.
+4. Configure the data source as needed and click **Import**.
+
+### Option 2: Import via JSON File
+
+Alternatively, you can import the Grafana dashboard using the JSON file provided in this repository:
+
+1. Download the `21803_rev1.json` file from the repository.
+2. Go to your Grafana instance.
+3. Click the "+" icon on the left sidebar and select **Import**.
+4. Choose the **Upload JSON file** option.
+5. Select the `21803_rev1.json` file from your local machine.
+6. Configure the data source as needed and click **Import**.
+
+By using this JSON file, you ensure that the dashboard is configured exactly as provided, without relying on the Grafana Dashboard ID.

@@ -1,19 +1,25 @@
 FROM python:3.8-slim
 
+# Install cron and vim
 RUN apt-get update && apt-get -y install cron vim
+
+# Set the working directory
 WORKDIR /jenkins_collector/
+
+# Copy all files to the container
 COPY . .
-COPY crontab /etc/cron.d/crontab
-RUN chmod 0644 /etc/cron.d/crontab
+
+# Install Python dependencies
 RUN /usr/local/bin/python3 -m pip install --upgrade pip
 RUN pip3 install -r requirements.txt
 
 # Create the logs directory
 RUN mkdir -p /root/logs
 
-# ENTRYPOINT [ "/bin/sh",  "entrypoint.sh" ]
+# Copy the entrypoint script and make it executable
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
-RUN /usr/bin/crontab /etc/cron.d/crontab
-# run crond as main process of container
-CMD ["cron", "-f"]
+# Run the entrypoint script
+CMD ["/entrypoint.sh"]
 

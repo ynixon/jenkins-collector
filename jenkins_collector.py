@@ -1,35 +1,46 @@
-import os 
+import os
 import logging
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
-from influx_client import InfluxPoint
 
 # Configure log level from environment variable or default to INFO
-log_level = os.getenv('LOG_LEVEL', 'INFO').upper()
+log_level = os.getenv("LOG_LEVEL", "INFO").upper()
 
 # Set up logging
 logger = logging.getLogger(__name__)
 logger.setLevel(log_level)
 
 # If debug mode, log to a separate file
-if log_level == 'DEBUG':
-    debug_handler = logging.FileHandler('jenkins_collector_debug.log')
+if log_level == "DEBUG":
+    debug_handler = logging.FileHandler("jenkins_collector_debug.log")
     debug_handler.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
+    formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
     debug_handler.setFormatter(formatter)
     logger.addHandler(debug_handler)
 
 # Default console handler
 console_handler = logging.StreamHandler()
 console_handler.setLevel(log_level)
-formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
+formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
+
 
 class BuildInfo:
     """Class representing build information."""
 
-    def __init__(self, jobname, build_id, url, timestamp, duration, estimatedDuration, queueId, result, displayName):
+    def __init__(
+        self,
+        jobname,
+        build_id,
+        url,
+        timestamp,
+        duration,
+        estimatedDuration,
+        queueId,
+        result,
+        displayName,
+    ):
         """
         Initialize the BuildInfo with build details.
 
@@ -54,6 +65,7 @@ class BuildInfo:
         self.result = result
         self.displayName = displayName
 
+
 def is_recent_build(build_info, days=7):
     """
     Check if a build is recent within the specified number of days.
@@ -65,8 +77,9 @@ def is_recent_build(build_info, days=7):
     Returns:
         bool: True if the build is recent, False otherwise.
     """
-    build_timestamp = datetime.fromtimestamp(build_info['timestamp'] / 1000)
+    build_timestamp = datetime.fromtimestamp(build_info["timestamp"] / 1000)
     return build_timestamp >= datetime.now() - timedelta(days=days)
+
 
 def gen_build_data(build_info, job, build_id):
     """
@@ -81,19 +94,16 @@ def gen_build_data(build_info, job, build_id):
         dict: A dictionary containing the data to write to InfluxDB.
     """
     return {
-        'measurement': 'jenkins',
-        'tags': {
-            'jobname': job,
-            'build_id': build_id,
-            'url': build_info['url']
+        "measurement": "jenkins",
+        "tags": {"jobname": job, "build_id": build_id, "url": build_info["url"]},
+        "time": round(build_info["timestamp"] / 1000),
+        "fields": {
+            "duration": build_info["duration"],
+            "estimatedDuration": build_info["estimatedDuration"],
+            "result": build_info["result"],
         },
-        'time': round(build_info['timestamp'] / 1000),
-        'fields': {
-            'duration': build_info['duration'],
-            'estimatedDuration': build_info['estimatedDuration'],
-            'result': build_info['result']
-        }
     }
+
 
 def process_build(jenkins_client, influx_client, job, build):
     """
@@ -111,7 +121,8 @@ def process_build(jenkins_client, influx_client, job, build):
             data = gen_build_data(build_info, job, build)
             influx_client.write_data_batch([data])
     except Exception as e:
-        logger.warning(f"Error processing build {build} for job {job}: {str(e)}")
+        logger.warning("Error processing build %s for job %s: %s", build, job, str(e))
+
 
 def collector(jenkins_client, influx_client):
     """
@@ -123,12 +134,14 @@ def collector(jenkins_client, influx_client):
     """
     # Corrected method name
     list_job = jenkins_client.get_filtered_jobs()
-    
+
     with ThreadPoolExecutor(max_workers=5) as executor:
         for job in list_job:
             list_build = jenkins_client.get_list_build(job)
             if not list_build:
-                logging.info(f"No builds found for job: {job}")
+                logging.info("No builds found for job: %s", job)
                 continue
             for build in list_build:
-                executor.submit(process_build, jenkins_client, influx_client, job, build)
+                executor.submit(
+                    process_build, jenkins_client, influx_client, job, build
+                )

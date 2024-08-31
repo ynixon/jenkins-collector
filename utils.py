@@ -31,17 +31,18 @@ if not os.path.exists(logPath):
 fileHandler = logging.FileHandler("{0}/{1}.log".format(logPath, fileName))
 fileHandler.setFormatter(logFormatter)
 
-'''
-Avoid duplicated logs
-'''
+# Clear existing handlers to avoid duplicated logs
 if rootLogger.hasHandlers():
     rootLogger.handlers.clear()
+
+# Add handlers
 rootLogger.addHandler(fileHandler)
 consoleHandler = logging.StreamHandler(sys.stdout)
 consoleHandler.setFormatter(logFormatter)
 rootLogger.addHandler(consoleHandler)
-logging.getLogger().setLevel(logging.INFO)
-logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
+
+# Set the logging level for the root logger
+rootLogger.setLevel(logging.INFO)
 
 def get_json(element, json_data):
     """
@@ -58,5 +59,5 @@ def get_json(element, json_data):
         if element in json_data:
             return json_data[element]
     except Exception as e:
-        logging.info(f"Error accessing JSON element '{element}': {str(e)}")
+        logging.info("Error accessing JSON element '%s': %s", element, str(e))
         raise e

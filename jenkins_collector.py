@@ -6,24 +6,29 @@ from concurrent.futures import ThreadPoolExecutor
 # Configure log level from environment variable or default to INFO
 log_level = os.getenv("LOG_LEVEL", "INFO").upper()
 
-# Set up logging
-logger = logging.getLogger(__name__)
-logger.setLevel(log_level)
+# Set up the root logger
+root_logger = logging.getLogger()
+root_logger.setLevel(log_level)
 
-# If debug mode, log to a separate file
-if log_level == "DEBUG":
-    debug_handler = logging.FileHandler("jenkins_collector_debug.log")
-    debug_handler.setLevel(logging.DEBUG)
-    formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
-    debug_handler.setFormatter(formatter)
-    logger.addHandler(debug_handler)
+# Clear any existing handlers to avoid duplicated logs
+if root_logger.hasHandlers():
+    root_logger.handlers.clear()
 
 # Default console handler
 console_handler = logging.StreamHandler()
 console_handler.setLevel(log_level)
 formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
 console_handler.setFormatter(formatter)
-logger.addHandler(console_handler)
+root_logger.addHandler(console_handler)
+
+# If debug mode, log to a separate file
+if log_level == "DEBUG":
+    debug_handler = logging.FileHandler("jenkins_collector_debug.log")
+    debug_handler.setLevel(logging.DEBUG)
+    debug_handler.setFormatter(formatter)
+    root_logger.addHandler(debug_handler)
+
+logger = root_logger
 
 
 class BuildInfo:
@@ -139,7 +144,7 @@ def collector(jenkins_client, influx_client):
         for job in list_job:
             list_build = jenkins_client.get_list_build(job)
             if not list_build:
-                logging.info("No builds found for job: %s", job)
+                logger.info("No builds found for job: %s", job)
                 continue
             for build in list_build:
                 executor.submit(

@@ -78,46 +78,28 @@ class JenkinsClient:
             logger.error("Unable to connect to Jenkins server", exc_info=True)
             raise e
 
-    def _is_job_relevant(self, job_name):
+    def _is_job_relevant(self, job_name, job_info):
         """
-        Determine if a job is relevant based on name pattern and job type.
+        Determine if a job is relevant based on its type and status.
 
         Args:
             job_name (str): The name of the job.
+            job_info (dict): Information about the job, including '_class' and 'color'.
 
         Returns:
             bool: True if relevant, False otherwise.
         """
-        if "/" in job_name:
-            last_segment = job_name.split("/")[-1]
-            try:
-                job_info = self._server_instance.get_job_info(
-                    job_name
-                )  # Get job info to check its type
-                job_type = job_info[
-                    "_class"
-                ].lower()  # Class type can provide a clue about job type (freestyle, pipeline, etc.)
+        # Check if job is disabled
+        job_status = job_info.get("color", "").lower()
+        if "disabled" in job_status:
+            logger.debug(
+                "Skipping disabled job: %s with status: %s", job_name, job_status
+            )
+            return False
 
-                # Check if job type is freestyle or pipeline and if the naming pattern matches
-                return (
-                    job_type
-                    in [
-                        "hudson.model.freestyleproject",
-                        "org.jenkinsci.plugins.workflow.job.workflowjob",
-                    ]
-                ) and (
-                    last_segment in ["master", "develop"]
-                    or last_segment.startswith("release")
-                )
-            except NotFoundException:
-                logger.warning("Job '%s' not found, skipping.", job_name)
-                return False  # Skip jobs that are not found
-            except JenkinsException as e:
-                logger.error("Error fetching job info for '%s': %s", job_name, e)
-
-                
-                return False  # Skip jobs with errors
-        return True  # Return True for jobs without slashes
+        # Include all jobs, regardless of folders, except disabled ones
+        logger.debug("Including job: %s with status: %s", job_name, job_status)
+        return True
 
     def get_filtered_jobs(self):
         """
@@ -127,11 +109,20 @@ class JenkinsClient:
             list: A list of job names.
         """
         all_jobs = self._server_instance.get_all_jobs()
-        valid_jobs = [
-            get_json("fullname", job)
-            for job in all_jobs
-            if self._is_job_relevant(get_json("fullname", job))
-        ]
+        valid_jobs = []
+
+        for job in all_jobs:
+            job_name = get_json("fullname", job)
+            job_info = job  # Ensure job_info is extracted here
+            if self._is_job_relevant(
+                job_name, job_info
+            ):  # Pass both job_name and job_info
+                valid_jobs.append(job_name)
+            else:
+                logger.debug(
+                    "Job '%s' is not relevant or is disabled, skipping.", job_name
+                )
+
         return valid_jobs
 
     def get_list_build(self, jobname):
@@ -160,6 +151,9 @@ class JenkinsClient:
             else:
                 job_info = self._server_instance.get_job_info(jobname)
                 builds = get_json("builds", job_info)
+                logger.debug(
+                    "Builds for job '%s': %s", jobname, builds
+                )  # Add this line
                 if not builds:
                     logger.debug("Job %s has no build data.", jobname)
                     self._job_cache[jobname] = {

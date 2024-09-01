@@ -137,16 +137,20 @@ def collector(jenkins_client, influx_client):
         jenkins_client (JenkinsClient): The Jenkins client.
         influx_client (InfluxClient): The InfluxDB client.
     """
-    # Corrected method name
+
     list_job = jenkins_client.get_filtered_jobs()
 
     with ThreadPoolExecutor(max_workers=5) as executor:
         for job in list_job:
+            logger.debug("Processing job: %s", job)  # Added debug log
             list_build = jenkins_client.get_list_build(job)
             if not list_build:
                 logger.info("No builds found for job: %s", job)
                 continue
             for build in list_build:
+                logger.debug(
+                    "Submitting build: %s for job: %s to be processed.", build, job
+                )  # Added debug log
                 executor.submit(
                     process_build, jenkins_client, influx_client, job, build
                 )
